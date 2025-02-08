@@ -1,61 +1,83 @@
-### Initial script for Madlebrot set generation from: https://medium.com/swlh/visualizing-the-mandelbrot-set-using-python-50-lines-f6aa5a05cf0f
-
+### Inspiration for Mandelbrot set generation from: 
+### https://medium.com/swlh/visualizing-the-mandelbrot-set-using-python-50-lines-f6aa5a05cf0f
 
 from PIL import Image
-import colorsys
-import math
 import os
+from datetime import datetime as dt
+from time import time
+from colour_rules import powerColor, logColor, colour_functions
 
-# frame parameters
-width = 1000 #pixels
-x = -0.65
-y = 0
-xRange = 3.4
-aspectRatio = 4/3 
 
-precision = 500
+def generate_mandelbrot(width=1000, precision=500, colour_rule="powerColor", zoom=1.0):
+    """Generate a Mandelbrot set image.
 
-height = round(width / aspectRatio)
-yRange = xRange / aspectRatio
-minX = x - xRange / 2
-maxX = x + xRange / 2
-minY = y - yRange / 2
-maxY = y + yRange / 2
+    Args:
+        width (int): Image width in pixels.
+        precision (int): Maximum iterations for divergence.
+        colour_rule (str): Coloring method, either 'powerColor' or 'logColor'.
+        zoom (float): Zoom level, where 1.0 is the default view, >1 zooms in, and <1 zooms out.
 
-img = Image.new('RGB', (width, height), color = 'black')
-pixels = img.load()
+    Returns:
+        str: Filename of the saved image.
+    """
 
-def logColor(distance, base, const, scale):
-    color = -1 * math.log(distance, base)
-    rgb = colorsys.hsv_to_rgb(const + scale * color,0.8,0.9)
-    return tuple(round(i * 255) for i in rgb)
+    # Ensure output directory exists
+    os.makedirs("images", exist_ok=True)
 
-def powerColor(distance, exp, const, scale):
-    color = distance**exp
-    rgb = colorsys.hsv_to_rgb(const + scale * color,1 - 0.6 * color,0.9)
-    return tuple(round(i * 255) for i in rgb)
+    # Define aspect ratio and calculate height
+    aspect_ratio = 4 / 3
+    height = round(width / aspect_ratio)
 
-for row in range(height):
-    for col in range(width):
-        x = minX + col * xRange / width
-        y = maxY - row * yRange / height
-        oldX = x
-        oldY = y
-        for i in range(precision + 1):
-            a = x*x - y*y #real component of z^2
-            b = 2 * x * y #imaginary component of z^2
-            x = a + oldX #real component of new z
-            y = b + oldY #imaginary component of new z
-            if x*x + y*y > 4:
-                break
-        if i < precision:
-            distance = (i + 1) / (precision + 1)
-            rgb = powerColor(distance, 0.2, 0.27, 1.0)
-            rgb = logColor(distance, 0.2, 2, 1.0)
-            pixels[col,row] = rgb
-        index = row * width + col + 1
-        print("{:,} / {:,}, {}%".format(index, width * height, round(index / (width * height) * 100 * 10) / 10), end="\r")
+    # Frame parameters
+    x, y = -0.65, 0  # Center of the Mandelbrot set
+    base_x_range = 3.4  # Default full range
 
-print(f'Generation completed successfully: {width * height:,} pixels')
-img.save('output.png')
-os.system('open output.png')
+    x_range = base_x_range / zoom  # Adjust x range based on zoom
+    y_range = x_range / aspect_ratio
+
+    min_x, max_x = x - x_range / 2, x + x_range / 2
+    min_y, max_y = y - y_range / 2, y + y_range / 2
+
+
+    if colour_rule not in colour_functions:
+        raise ValueError(f"Invalid colour_rule '{colour_rule}'. Choose from {list(colour_functions.keys())}.")
+
+    color_func = colour_functions[colour_rule]
+
+    # Create image
+    img = Image.new("RGB", (width, height), color="black")
+    pixels = img.load()
+
+    # Compute Mandelbrot set
+    for row in range(height):
+        for col in range(width):
+            x = min_x + col * x_range / width
+            y = max_y - row * y_range / height
+            old_x, old_y = x, y
+
+            for i in range(precision + 1):
+                a, b = x * x - y * y, 2 * x * y  # z^2 real and imaginary components
+                x, y = a + old_x, b + old_y
+                if x * x + y * y > 4:
+                    break
+
+            if i < precision:
+                distance = (i + 1) / (precision + 1)
+                pixels[col, row] = color_func(distance, 0.2, 0.27, 1.0)
+
+        # Progress update
+        index = (row + 1) * width
+        print(f"{index:,} / {width * height:,}, {round(index / (width * height) * 100, 1)}%", end="\r")
+
+    # Save image
+    timestamp = dt.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"images/output_{timestamp}_{width}x{height}px_zoom{zoom:.2f}.png"
+    img.save(filename)
+
+    print(f"\nGeneration completed successfully: {width * height:,} pixels")
+    return img, filename
+
+
+# Run with default values if executed directly
+if __name__ == "__main__":
+    generate_mandelbrot(colour_rule="powerColor", zoom=1.0)
