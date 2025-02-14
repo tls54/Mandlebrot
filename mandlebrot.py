@@ -7,8 +7,8 @@ from datetime import datetime as dt
 from time import time
 from colour_rules import powerColor, logColor, colour_functions
 
-
-def generate_mandelbrot(width=1000, precision=500, colour_rule="powerColor", zoom=1.0):
+# TODO: add y offset param.
+def generate_mandelbrot(width=1000, precision=500, colour_rule="powerColor", zoom=1.0, offset=0.65):
     """Generate a Mandelbrot set image.
 
     Args:
@@ -18,6 +18,7 @@ def generate_mandelbrot(width=1000, precision=500, colour_rule="powerColor", zoo
         zoom (float): Zoom level, where 1.0 is the default view, >1 zooms in, and <1 zooms out.
 
     Returns:
+        image: callable image object.
         str: Filename of the saved image.
     """
 
@@ -29,7 +30,7 @@ def generate_mandelbrot(width=1000, precision=500, colour_rule="powerColor", zoo
     height = round(width / aspect_ratio)
 
     # Frame parameters
-    x, y = -0.65, 0  # Center of the Mandelbrot set
+    x, y = -offset, 0  # Center of the Mandelbrot set
     base_x_range = 3.4  # Default full range
 
     x_range = base_x_range / zoom  # Adjust x range based on zoom
